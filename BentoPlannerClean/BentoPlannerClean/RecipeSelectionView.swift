@@ -170,32 +170,38 @@ struct RecipeSelectionView: View {
     }
     
     private func getAllRecipesForCategory(_ category: BentoCategory) -> [BentoRecipe] {
-        var allRecipes: [BentoRecipe] = []
-        
+        var recipesById: [UUID: BentoRecipe] = [:]
+
         // メインレシピから該当カテゴリを取得
-        allRecipes.append(contentsOf: bentoStore.recipes.filter { $0.category == category })
-        
-        // AI生成レシピから該当カテゴリを取得
+        for recipe in bentoStore.recipes.filter({ $0.category == category }) {
+            recipesById[recipe.id] = recipe
+        }
+
+        // AI生成レシピから該当カテゴリを取得（重複しないものだけ追加）
         if let aiRecipes = bentoStore.aiGeneratedRecipes[category] {
-            allRecipes.append(contentsOf: aiRecipes)
+            for recipe in aiRecipes {
+                recipesById[recipe.id] = recipe
+            }
         }
-        
-        // お気に入りレシピから該当カテゴリを取得
-        allRecipes.append(contentsOf: bentoStore.favoriteRecipes.filter { $0.category == category })
-        
-        // 重複を除去
-        return Array(Set(allRecipes.map { $0.id })).compactMap { id in
-            allRecipes.first { $0.id == id }
+
+        // お気に入りレシピから該当カテゴリを取得（重複しないものだけ追加）
+        for recipe in bentoStore.favoriteRecipes.filter({ $0.category == category }) {
+            recipesById[recipe.id] = recipe
         }
+
+        // 辞書から値を配列として返す
+        return Array(recipesById.values)
     }
 }
 
 struct SelectableRecipeCard: View {
     let recipe: BentoRecipe
     let onSelect: () -> Void
-    
+
     var body: some View {
-        Button(action: onSelect) {
+        Button(action: {
+            onSelect()
+        }) {
             HStack(spacing: 16) {
                 // レシピ情報
                 VStack(alignment: .leading, spacing: 4) {

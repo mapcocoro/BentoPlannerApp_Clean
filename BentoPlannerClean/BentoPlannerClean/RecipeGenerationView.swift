@@ -5,7 +5,27 @@ struct RecipeGenerationView: View {
     @EnvironmentObject var bentoStore: BentoStore
     @Environment(\.dismiss) var dismiss
     @State private var selectedRecipe: BentoRecipe?
-    
+    @State private var currentTip: String = CookingTips.randomTip()
+    @State private var timer: Timer?
+
+    // 献立名の表示ロジック
+    var navigationTitle: String {
+        // おまかせカテゴリーはそのまま表示
+        if category == .omakase {
+            return category.rawValue
+        }
+
+        // レシピが生成されている場合は最初のレシピ名を表示
+        if let recipes = bentoStore.aiGeneratedRecipes[category],
+           let firstRecipe = recipes.first,
+           !bentoStore.isLoading {
+            return firstRecipe.name
+        }
+
+        // それ以外はカテゴリー名を表示
+        return category.rawValue
+    }
+
     var body: some View {
         VStack(spacing: 20) {
             // ヘッダー
@@ -39,7 +59,7 @@ struct RecipeGenerationView: View {
             // 生成ボタン
             generateButton
         }
-        .navigationTitle(category.rawValue)
+        .navigationTitle(navigationTitle)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
@@ -64,19 +84,43 @@ struct RecipeGenerationView: View {
     }
     
     var loadingView: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 20) {
             ProgressView()
                 .scaleEffect(1.5)
-            
+
             Text("レシピを生成中...")
                 .font(.system(size: 18, weight: .medium, design: .rounded))
                 .foregroundColor(.secondary)
-            
-            Text("美味しいお弁当レシピを考えています")
-                .font(.system(size: 14, weight: .regular, design: .rounded))
-                .foregroundColor(.secondary)
+
+            // 豆知識表示
+            VStack(spacing: 12) {
+                Text("💡 お料理豆知識")
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .foregroundColor(.orange)
+
+                Text(currentTip)
+                    .font(.system(size: 14, weight: .regular, design: .rounded))
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+                    .lineLimit(3)
+                    .transition(.opacity)
+                    .id(currentTip) // アニメーション用
+            }
+            .padding()
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.orange.opacity(0.1))
+            )
+            .padding(.horizontal)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onAppear {
+            startTipRotation()
+        }
+        .onDisappear {
+            stopTipRotation()
+        }
     }
     
     var emptyStateView: some View {
@@ -112,6 +156,8 @@ struct RecipeGenerationView: View {
     
     var generateButton: some View {
         Button(action: {
+            NSLog("🔘 Generate button tapped for category: \(category.rawValue)")
+            NSLog("🔘 Current isLoading state: \(bentoStore.isLoading)")
             Task {
                 await bentoStore.generateAIRecipes(for: category)
             }
@@ -138,6 +184,21 @@ struct RecipeGenerationView: View {
         }
         .disabled(bentoStore.isLoading)
         .padding(.horizontal)
+    }
+
+    // 豆知識ローテーション
+    func startTipRotation() {
+        currentTip = CookingTips.randomTip()
+        timer = Timer.scheduledTimer(withTimeInterval: 4.0, repeats: true) { _ in
+            withAnimation(.easeInOut(duration: 0.5)) {
+                currentTip = CookingTips.randomTip()
+            }
+        }
+    }
+
+    func stopTipRotation() {
+        timer?.invalidate()
+        timer = nil
     }
 }
 

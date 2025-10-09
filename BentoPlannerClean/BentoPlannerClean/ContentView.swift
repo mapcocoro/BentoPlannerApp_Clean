@@ -343,12 +343,17 @@ struct RecommendationCard: View {
     }
 }
 
+// MARK: - Helper for sheet presentation
+struct DaySelection: Identifiable {
+    let id = UUID()
+    let day: String
+}
+
 // MARK: - Other Views (Placeholder)
 struct WeeklyPlanView: View {
     @EnvironmentObject var bentoStore: BentoStore
     @State private var selectedWeek = Date()
-    @State private var showingFavoritesForWeekly = false
-    @State private var selectedDayForRecipe = ""
+    @State private var selectedDayForRecipe: DaySelection?
     
     var body: some View {
         ScrollView {
@@ -374,13 +379,8 @@ struct WeeklyPlanView: View {
                 }
             }
         }
-        .sheet(isPresented: $showingFavoritesForWeekly) {
-            NavigationView {
-                WeeklyPlanFavoritesView(selectedDay: selectedDayForRecipe)
-                    .onAppear {
-                        print("🔄 WeeklyPlanFavoritesView appeared with selectedDay: '\(selectedDayForRecipe)'")
-                    }
-            }
+        .sheet(item: $selectedDayForRecipe) { daySelection in
+            RecipeSelectionView(selectedDay: daySelection.day)
         }
     }
     
@@ -419,9 +419,7 @@ struct WeeklyPlanView: View {
                         dayName: day.key,
                         recipe: day.value,
                         onAddRecipe: {
-                            print("🔄 WeeklyPlanView: Setting selectedDayForRecipe to '\(day.key)'")
-                            selectedDayForRecipe = day.key
-                            showingFavoritesForWeekly = true
+                            selectedDayForRecipe = DaySelection(day: day.key)
                         },
                         onRemoveRecipe: {
                             if let recipe = day.value {
@@ -646,8 +644,7 @@ struct WeeklyPlanFavoritesView: View {
     @EnvironmentObject var bentoStore: BentoStore
     @Environment(\.dismiss) var dismiss
     let selectedDay: String
-    @State private var currentSelectedDay: String = ""
-    
+
     var body: some View {
         VStack {
             if bentoStore.favoriteRecipes.isEmpty {
@@ -669,10 +666,7 @@ struct WeeklyPlanFavoritesView: View {
             } else {
                 List(bentoStore.favoriteRecipes) { recipe in
                     Button(action: {
-                        print("🔄 WeeklyPlanFavoritesView: selectedDay = '\(selectedDay)'")
-                        print("🔄 WeeklyPlanFavoritesView: currentSelectedDay = '\(currentSelectedDay)'")
-                        print("🔄 WeeklyPlanFavoritesView: recipe = '\(recipe.name)'")
-                        bentoStore.addRecipeToWeeklyPlan(recipe, day: currentSelectedDay)
+                        bentoStore.addRecipeToWeeklyPlan(recipe, day: selectedDay)
                         dismiss()
                     }) {
                         HStack(spacing: 16) {
@@ -714,7 +708,7 @@ struct WeeklyPlanFavoritesView: View {
                 }
             }
         }
-        .navigationTitle("\(currentSelectedDay.isEmpty ? selectedDay : currentSelectedDay)曜日のレシピ選択")
+        .navigationTitle("\(selectedDay)曜日のレシピ選択")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -724,8 +718,7 @@ struct WeeklyPlanFavoritesView: View {
             }
         }
         .onAppear {
-            currentSelectedDay = selectedDay
-            print("🔄 WeeklyPlanFavoritesView: onAppear - setting currentSelectedDay to '\(selectedDay)'")
+            print("🔄 WeeklyPlanFavoritesView: onAppear - selectedDay = '\(selectedDay)'")
         }
     }
 }

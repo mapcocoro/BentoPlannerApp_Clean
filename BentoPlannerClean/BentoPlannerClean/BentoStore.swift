@@ -57,20 +57,20 @@ class BentoStore: ObservableObject {
         let safeCategoryHash = abs(category.rawValue.hashValue) % 10000  // 値を制限
         
         let complexRandomId = safeTimestamp + randomId + safeCategoryHash
-        
-        print("🔄 Starting recipe generation for category: \(category.rawValue) - ID: \(complexRandomId)")
-        
+
+        NSLog("🔄 Starting recipe generation for category: \(category.rawValue) - ID: \(complexRandomId)")
+
         // 既にローディング中の場合は処理をスキップ
         if isLoading {
-            print("⚠️ Already generating recipes, skipping duplicate request")
+            NSLog("⚠️ Already generating recipes, skipping duplicate request")
             return
         }
-        
+
         isLoading = true
         errorMessage = nil
 
         do {
-            print("📡 Making API request...")
+            NSLog("📡 Making API request...")
             // 過去30回分のレシピ履歴を取得（重複回避用）
             let historyRecipes = recipeHistoryManager.getRecentRecipes(for: category, limit: 30)
             let previousRecipeNames = historyRecipes.map { $0.name }
@@ -78,10 +78,10 @@ class BentoStore: ObservableObject {
             let previousSideDishes = recipeHistoryManager.getRecentSideDishes(for: category, limit: 50)
             let previousCookingMethods = recipeHistoryManager.getRecentCookingMethods(for: category, limit: 20)
 
-            print("🚫 Avoiding \(previousRecipeNames.count) previous recipes")
-            print("🍳 Avoiding \(previousMainDishes.count) main dishes")
-            print("🥗 Avoiding \(previousSideDishes.count) side dishes")
-            print("🔥 Avoiding \(previousCookingMethods.count) cooking methods")
+            NSLog("🚫 Avoiding \(previousRecipeNames.count) previous recipes")
+            NSLog("🍳 Avoiding \(previousMainDishes.count) main dishes")
+            NSLog("🥗 Avoiding \(previousSideDishes.count) side dishes")
+            NSLog("🔥 Avoiding \(previousCookingMethods.count) cooking methods")
 
             let newRecipes = try await aiService.generateBentoRecipes(
                 for: category,
@@ -91,7 +91,7 @@ class BentoStore: ObservableObject {
                 previousSideDishes: previousSideDishes,
                 previousCookingMethods: previousCookingMethods
             )
-            print("✅ Successfully generated \(newRecipes.count) recipes")
+            NSLog("✅ Successfully generated \(newRecipes.count) recipes")
 
             // 既存のレシピをクリアして新しいものを強制的に表示
             self.aiGeneratedRecipes[category] = []
@@ -102,57 +102,57 @@ class BentoStore: ObservableObject {
                 recipeHistoryManager.addToHistory(recipe, category: category)
             }
             self.lastGeneratedRecipeNames[category] = newRecipes.map { $0.name }
-            print("📝 Added \(newRecipes.count) recipes to history for \(category.rawValue)")
-            
+            NSLog("📝 Added \(newRecipes.count) recipes to history for \(category.rawValue)")
+
             self.isLoading = false
-            print("✅ UI updated with new recipes for category: \(category.rawValue)")
+            NSLog("✅ UI updated with new recipes for category: \(category.rawValue)")
         } catch {
-            print("❌ Recipe generation failed: \(error.localizedDescription)")
-            print("❌ Error type: \(type(of: error))")
-            print("❌ Full error: \(error)")
-            
+            NSLog("❌ Recipe generation failed: \(error.localizedDescription)")
+            NSLog("❌ Error type: \(type(of: error))")
+            NSLog("❌ Full error: \(error)")
+
             self.errorMessage = "AIサーバーエラーが発生しました。フォールバックレシピを表示しています。"
             self.isLoading = false
             // フォールバック: カテゴリ専用のサンプルレシピを生成
             self.aiGeneratedRecipes[category] = []
             let fallbackRecipes = self.generateCategorySpecificFallback(for: category)
             self.aiGeneratedRecipes[category] = fallbackRecipes
-            print("🔄 Using fallback recipes for \(category.rawValue): \(fallbackRecipes.count) recipes")
+            NSLog("🔄 Using fallback recipes for \(category.rawValue): \(fallbackRecipes.count) recipes")
         }
     }
     
     // MARK: - Ingredient-Based Recipe Generation
     func generateRecipesFromIngredients(_ selectedIngredients: [Ingredient], additionalNotes: String = "") async {
-        print("🔄 Starting ingredient-based recipe generation")
+        NSLog("🔄 Starting ingredient-based recipe generation")
         
         // 既にローディング中の場合はスキップ
         if isLoading {
-            print("⚠️ Already generating recipes, skipping duplicate request")
+            NSLog("⚠️ Already generating recipes, skipping duplicate request")
             return
         }
-        
+
         isLoading = true
         errorMessage = nil
 
         do {
-            print("📡 Making ingredient-based API request...")
+            NSLog("📡 Making ingredient-based API request...")
             let newRecipes = try await aiService.generateRecipesFromIngredients(selectedIngredients, additionalNotes: additionalNotes)
-            print("✅ Successfully generated \(newRecipes.count) ingredient-based recipes")
+            NSLog("✅ Successfully generated \(newRecipes.count) ingredient-based recipes")
 
             self.ingredientBasedRecipes = newRecipes
             self.isLoading = false
-            print("✅ UI updated with new ingredient-based recipes")
+            NSLog("✅ UI updated with new ingredient-based recipes")
         } catch {
-            print("❌ Ingredient-based recipe generation failed: \(error.localizedDescription)")
-            
+            NSLog("❌ Ingredient-based recipe generation failed: \(error.localizedDescription)")
+
             self.errorMessage = error.localizedDescription
             self.isLoading = false
             // フォールバック: 選択された食材に基づいたサンプルレシピを生成
             let fallbackRecipes = self.generateIngredientBasedFallback(selectedIngredients)
             self.ingredientBasedRecipes = fallbackRecipes
-            print("🔄 Using ingredient-based fallback recipes: \(fallbackRecipes.count) recipes")
-            print("📋 Recipe names: \(fallbackRecipes.map { $0.name })")
-            print("🔍 Final ingredientBasedRecipes count: \(self.ingredientBasedRecipes.count)")
+            NSLog("🔄 Using ingredient-based fallback recipes: \(fallbackRecipes.count) recipes")
+            NSLog("📋 Recipe names: \(fallbackRecipes.map { $0.name })")
+            NSLog("🔍 Final ingredientBasedRecipes count: \(self.ingredientBasedRecipes.count)")
         }
     }
 
@@ -204,50 +204,37 @@ class BentoStore: ObservableObject {
 
     // MARK: - Weekly Plan Management
     func addRecipeToWeeklyPlan(_ recipe: BentoRecipe, day: String) {
-        print("🔄 Adding recipe '\(recipe.name)' to \(day)曜日...")
-        
         // Add to main recipes if not exists
         if !recipes.contains(where: { $0.id == recipe.id }) {
             recipes.append(recipe)
             saveRecipes()
-            print("📝 Added recipe to main recipes list")
         }
 
         switch day {
-        case "月": 
+        case "月":
             weeklyPlan.monday = recipe
-            print("📅 Set Monday recipe to '\(recipe.name)'")
-        case "火": 
+        case "火":
             weeklyPlan.tuesday = recipe
-            print("📅 Set Tuesday recipe to '\(recipe.name)'")
-        case "水": 
+        case "水":
             weeklyPlan.wednesday = recipe
-            print("📅 Set Wednesday recipe to '\(recipe.name)'")
-        case "木": 
+        case "木":
             weeklyPlan.thursday = recipe
-            print("📅 Set Thursday recipe to '\(recipe.name)'")
-        case "金": 
+        case "金":
             weeklyPlan.friday = recipe
-            print("📅 Set Friday recipe to '\(recipe.name)'")
-        case "土": 
+        case "土":
             weeklyPlan.saturday = recipe
-            print("📅 Set Saturday recipe to '\(recipe.name)'")
-        case "日": 
+        case "日":
             weeklyPlan.sunday = recipe
-            print("📅 Set Sunday recipe to '\(recipe.name)'")
-        default: 
-            print("❌ Invalid day: \(day)")
+        default:
             return
         }
-        
+
         saveWeeklyPlan()
-        
+
         // UIを強制更新
         DispatchQueue.main.async {
             self.objectWillChange.send()
         }
-        
-        print("✅ Successfully added recipe '\(recipe.name)' to \(day)曜日")
     }
     
     func removeRecipeFromWeeklyPlan(day: String) {

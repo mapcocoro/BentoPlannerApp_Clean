@@ -5,6 +5,8 @@ struct IngredientSelectionView: View {
     @State private var selectedIngredients: Set<Ingredient> = []
     @State private var additionalNotes: String = ""
     @State private var showingResults = false
+    @State private var currentTip: String = CookingTips.randomTip()
+    @State private var timer: Timer?
     
     var body: some View {
         ScrollViewReader { proxy in
@@ -128,32 +130,63 @@ struct IngredientSelectionView: View {
     }
     
     var generateButton: some View {
-        Button(action: {
-            Task {
-                await bentoStore.generateRecipesFromIngredients(Array(selectedIngredients), additionalNotes: additionalNotes)
-            }
-        }) {
-            HStack {
-                if bentoStore.isLoading {
-                    ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                        .scaleEffect(0.8)
-                } else {
-                    Image(systemName: "sparkles")
+        VStack(spacing: 16) {
+            Button(action: {
+                Task {
+                    await bentoStore.generateRecipesFromIngredients(Array(selectedIngredients), additionalNotes: additionalNotes)
                 }
-                
-                Text(bentoStore.isLoading ? "レシピ生成中..." : "お弁当レシピを提案してもらう")
-                    .fontWeight(.semibold)
+            }) {
+                HStack {
+                    if bentoStore.isLoading {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            .scaleEffect(0.8)
+                    } else {
+                        Image(systemName: "sparkles")
+                    }
+
+                    Text(bentoStore.isLoading ? "レシピ生成中..." : "お弁当レシピを提案してもらう")
+                        .fontWeight(.semibold)
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 50)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(canGenerate ? Color.pink : Color.gray)
+                )
+                .foregroundColor(.white)
             }
-            .frame(maxWidth: .infinity)
-            .frame(height: 50)
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(canGenerate ? Color.pink : Color.gray)
-            )
-            .foregroundColor(.white)
+            .disabled(!canGenerate || bentoStore.isLoading)
+
+            // ローディング中の豆知識表示
+            if bentoStore.isLoading {
+                VStack(spacing: 12) {
+                    Text("💡 お料理豆知識")
+                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                        .foregroundColor(.orange)
+
+                    Text(currentTip)
+                        .font(.system(size: 14, weight: .regular, design: .rounded))
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 32)
+                        .lineLimit(3)
+                        .transition(.opacity)
+                        .id(currentTip)
+                }
+                .padding()
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.orange.opacity(0.1))
+                )
+                .onAppear {
+                    startTipRotation()
+                }
+                .onDisappear {
+                    stopTipRotation()
+                }
+            }
         }
-        .disabled(!canGenerate || bentoStore.isLoading)
     }
     
     var resultsSection: some View {
@@ -216,6 +249,21 @@ struct IngredientSelectionView: View {
         } else {
             selectedIngredients.insert(ingredient)
         }
+    }
+
+    // 豆知識ローテーション
+    func startTipRotation() {
+        currentTip = CookingTips.randomTip()
+        timer = Timer.scheduledTimer(withTimeInterval: 4.0, repeats: true) { _ in
+            withAnimation(.easeInOut(duration: 0.5)) {
+                currentTip = CookingTips.randomTip()
+            }
+        }
+    }
+
+    func stopTipRotation() {
+        timer?.invalidate()
+        timer = nil
     }
 }
 
