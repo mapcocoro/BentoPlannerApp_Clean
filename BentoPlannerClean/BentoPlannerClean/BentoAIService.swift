@@ -21,7 +21,7 @@ class BentoAIService: ObservableObject {
             }
         }
     }
-    private let baseURL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent"
+    private let baseURL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
     
     func generateBentoRecipes(for category: BentoCategory, randomSeed: Int = 0, avoidRecipeNames: [String] = [], previousMainDishes: [String] = [], previousSideDishes: [String] = [], previousCookingMethods: [String] = []) async throws -> [BentoRecipe] {
         print("🔄 Starting AI recipe generation for category: \(category.rawValue)")
