@@ -279,9 +279,9 @@ class BentoAIService: ObservableObject {
                 ]
             ],
             "generationConfig": [
-                "temperature": 1.0,
-                "topK": 30,
-                "topP": 0.95,
+                "temperature": 1.3,
+                "topK": 100,
+                "topP": 0.99,
                 "maxOutputTokens": 2500
             ]
         ]
@@ -412,9 +412,9 @@ class BentoAIService: ObservableObject {
                 ]
             ],
             "generationConfig": [
-                "temperature": 0.7,
-                "topK": 40,
-                "topP": 0.95,
+                "temperature": 1.3,
+                "topK": 100,
+                "topP": 0.99,
                 "maxOutputTokens": 2048
             ]
         ]
@@ -507,6 +507,9 @@ class BentoAIService: ObservableObject {
         let uniqueId = timestamp + randomSeed + abs(category.hashValue)
         
         return """
+        🎲 **GENERATION_ID: \(uniqueId)** - このIDを使って完全にユニークなレシピを生成してください
+        📅 タイムスタンプ: \(timestamp) | シード値: \(randomSeed)
+
         <thinking_process>
           1.  まず、ユーザーから与えられた<user_context>（カテゴリ、季節、テーマ）を深く理解します。
           2.  次に、提案する3つの弁当それぞれに、全く異なるユニークなコンセプトを設定します。コンセプトは<user_context>から着想を得ます。（例: 「がっつり」カテゴリなら、「韓国屋台のチーズタッカルビ風」「洋食屋さんのデミグラスハンバーグ」「中華街の黒酢豚」など）
@@ -575,11 +578,12 @@ class BentoAIService: ObservableObject {
         </output_format>
 
         🎯 **多様性強制パラメータ（このIDを使って必ず異なるレシピを生成）**：
-        - 今回のユニークID: \(uniqueId)
-        - 季節のヒント: \(currentSeason)
-        - 今週のテーマ: \(weeklyTheme)
+        - 🔑 CRITICAL: GENERATION_ID \(uniqueId) を使用して、これまでとは完全に異なる新しいレシピを生成してください
+        - 📊 このリクエストは一意です - 過去の応答をキャッシュせず、新鮮なアイデアを提供してください
+        - 🌸 季節のヒント: \(currentSeason)
+        - 🎨 今週のテーマ: \(weeklyTheme)
 
-        **必ず3つの完全に異なるコンセプトのお弁当を提案してください。JSON形式で出力し、thinking_processの内容は出力に含めないでください。**
+        **⚠️ IMPORTANT: 必ず3つの完全に異なるコンセプトのお弁当を提案してください。JSON形式で出力し、thinking_processの内容は出力に含めないでください。**
         
         \(avoidRecipeNames.isEmpty ? "" : """
 
