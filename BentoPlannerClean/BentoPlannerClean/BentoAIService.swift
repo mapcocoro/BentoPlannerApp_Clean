@@ -136,6 +136,10 @@ class BentoAIService: ObservableObject {
                             5. サラダ：ブロッコリーサラダ、キャロットラペ
                             6. 焼き物：野菜のグリル、チーズ焼き
 
+                            🚨 重要な漢字の使い方：
+                            ✅ 「煮物」を使う（正しい）
+                            ❌ 「煉物」は使わない（間違い）
+
                             ✅ OK例：「ほうれん草の胡麻和え」「ブロッコリーのガーリック炒め」「人参グラッセ」「いんげんのナムル」「オクラのおかか和え」「パプリカのマリネ」← 全て異なる調理法！
                             
                             【🔥 CRITICAL: 絶対に守るルール】
@@ -1159,7 +1163,10 @@ class BentoAIService: ObservableObject {
             for error in validationErrors {
                 print("  - \(error)")
             }
-            print("\n⚠️ API response has validation issues but proceeding with recipes...")
+            print("\n🚨 CRITICAL: Rejecting invalid recipes - API must regenerate")
+
+            // バリデーションエラーがある場合はエラーを投げる
+            throw BentoAIError.invalidRecipeContent
         } else {
             print("\n✅ All validation checks passed!")
         }
@@ -1239,7 +1246,7 @@ class BentoAIService: ObservableObject {
     // Extract cooking method from dish name
     private func extractCookingMethod(_ dishName: String) -> String {
         let cookingMethods = [
-            "煮物", "煮付け", "含め煮", "甘露煮", "佃煮", "角煮", "煮込み",
+            "煮物", "煮付け", "含め煮", "甘露煮", "佃煮", "角煮", "煮込み", "煉物",  // 煉物も煮物として扱う
             "焼き", "塩焼き", "味噌焼き", "照り焼き", "蒲焼き", "西京焼き",
             "揚げ", "唐揚げ", "竜田揚げ", "天ぷら", "フライ", "カツ",
             "炒め", "炒め物", "きんぴら",
@@ -1250,7 +1257,8 @@ class BentoAIService: ObservableObject {
 
         for method in cookingMethods {
             if dishName.contains(method) {
-                return method
+                // 煉物は煮物として統一
+                return method == "煉物" ? "煮物" : method
             }
         }
 
@@ -1392,7 +1400,8 @@ enum BentoAIError: Error, LocalizedError {
     case noContent
     case invalidJSON
     case apiKeyMissing
-    
+    case invalidRecipeContent
+
     var errorDescription: String? {
         switch self {
         case .invalidURL: return "無効なURLです"
@@ -1401,6 +1410,7 @@ enum BentoAIError: Error, LocalizedError {
         case .noContent: return "コンテンツが見つかりません"
         case .invalidJSON: return "JSONの解析に失敗しました"
         case .apiKeyMissing: return "APIキーが設定されていません"
+        case .invalidRecipeContent: return "レシピの内容に問題があります（材料不一致・重複など）"
         }
     }
 }
