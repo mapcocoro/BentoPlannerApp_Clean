@@ -26,7 +26,8 @@ class BentoStore: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
     
-    // 前回生成されたレシピ名を記録（重複回避用）
+    // レシピ生成履歴を記録（重複回避用）
+    private var recipeHistoryManager = RecipeHistoryManager()
     private var lastGeneratedRecipeNames: [BentoCategory: [String]] = [:]
     
     private let dailyRecommendationsKey = "DailyRecommendations"
@@ -70,14 +71,25 @@ class BentoStore: ObservableObject {
 
         do {
             print("📡 Making API request...")
-            // 前回生成されたレシピ名を取得（重複回避用）
-            let previousRecipeNames = self.lastGeneratedRecipeNames[category] ?? []
-            print("🚫 Avoiding previous recipes: \(previousRecipeNames)")
-            
+            // 過去30回分のレシピ履歴を取得（重複回避用）
+            let historyRecipes = recipeHistoryManager.getRecentRecipes(for: category, limit: 30)
+            let previousRecipeNames = historyRecipes.map { $0.name }
+            let previousMainDishes = recipeHistoryManager.getRecentMainDishes(for: category, limit: 50)
+            let previousSideDishes = recipeHistoryManager.getRecentSideDishes(for: category, limit: 50)
+            let previousCookingMethods = recipeHistoryManager.getRecentCookingMethods(for: category, limit: 20)
+
+            print("🚫 Avoiding \(previousRecipeNames.count) previous recipes")
+            print("🍳 Avoiding \(previousMainDishes.count) main dishes")
+            print("🥗 Avoiding \(previousSideDishes.count) side dishes")
+            print("🔥 Avoiding \(previousCookingMethods.count) cooking methods")
+
             let newRecipes = try await aiService.generateBentoRecipes(
-                for: category, 
+                for: category,
                 randomSeed: complexRandomId,
-                avoidRecipeNames: previousRecipeNames
+                avoidRecipeNames: previousRecipeNames,
+                previousMainDishes: previousMainDishes,
+                previousSideDishes: previousSideDishes,
+                previousCookingMethods: previousCookingMethods
             )
             print("✅ Successfully generated \(newRecipes.count) recipes")
 
@@ -85,9 +97,12 @@ class BentoStore: ObservableObject {
             self.aiGeneratedRecipes[category] = []
             self.aiGeneratedRecipes[category] = newRecipes
             
-            // 今回生成されたレシピ名を記録（次回の重複回避用）
+            // 今回生成されたレシピを履歴に追加
+            for recipe in newRecipes {
+                recipeHistoryManager.addToHistory(recipe, category: category)
+            }
             self.lastGeneratedRecipeNames[category] = newRecipes.map { $0.name }
-            print("📝 Recorded recipe names for \(category.rawValue): \(self.lastGeneratedRecipeNames[category] ?? [])")
+            print("📝 Added \(newRecipes.count) recipes to history for \(category.rawValue)")
             
             self.isLoading = false
             print("✅ UI updated with new recipes for category: \(category.rawValue)")
