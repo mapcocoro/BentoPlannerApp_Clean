@@ -988,17 +988,26 @@ class BentoAIService: ObservableObject {
     }
     
     private func parseRecipesFromJSON(_ jsonString: String, category: BentoCategory) throws -> [BentoRecipe] {
+        // 🔍 ENHANCED LOGGING: Complete raw API response
+        print(String(repeating: "=", count: 80))
+        print("🔍 RAW API RESPONSE - START")
+        print(String(repeating: "=", count: 80))
+        print(jsonString)
+        print(String(repeating: "=", count: 80))
+        print("🔍 RAW API RESPONSE - END")
+        print(String(repeating: "=", count: 80))
+
         let cleanedJSON = extractJSON(from: jsonString)
-        
+
         print("🧹 Cleaned JSON length: \(cleanedJSON.count) characters")
-        if cleanedJSON.count < 500 {
-            print("🧹 Cleaned JSON: \(cleanedJSON)")
-        }
-        
+        print("🧹 CLEANED JSON - START")
+        print(cleanedJSON)
+        print("🧹 CLEANED JSON - END")
+
         guard let data = cleanedJSON.data(using: .utf8) else {
             throw BentoAIError.invalidJSON
         }
-        
+
         let aiRecipesResponse: AIRecipeResponse
         do {
             aiRecipesResponse = try JSONDecoder().decode(AIRecipeResponse.self, from: data)
@@ -1008,14 +1017,96 @@ class BentoAIService: ObservableObject {
             print("❌ Failed JSON: \(cleanedJSON)")
             throw BentoAIError.invalidJSON
         }
-        
+
         guard !aiRecipesResponse.recipes.isEmpty else {
             print("❌ No recipes found in response")
             throw BentoAIError.noContent
         }
-        
+
         print("🍱 Converting \(aiRecipesResponse.recipes.count) AI recipes to BentoRecipe format")
-        
+
+        // 🚨 VALIDATION: Collect all side dishes to check for duplicates
+        var allSideDishes: [String] = []
+        var validationErrors: [String] = []
+
+        for (index, aiRecipe) in aiRecipesResponse.recipes.enumerated() {
+            print("\n🔍 Validating Recipe \(index + 1): \(aiRecipe.name)")
+
+            // Validate main dish
+            let mainDishErrors = validateDishNameMatchesIngredients(
+                dishName: aiRecipe.mainDish.name,
+                ingredients: aiRecipe.mainDish.ingredients,
+                dishType: "主菜"
+            )
+            if !mainDishErrors.isEmpty {
+                validationErrors.append("Recipe \(index + 1) - 主菜: \(mainDishErrors.joined(separator: ", "))")
+            }
+
+            // Validate side dishes
+            let side1Errors = validateDishNameMatchesIngredients(
+                dishName: aiRecipe.sideDish1.name,
+                ingredients: aiRecipe.sideDish1.ingredients,
+                dishType: "副菜1"
+            )
+            if !side1Errors.isEmpty {
+                validationErrors.append("Recipe \(index + 1) - 副菜1: \(side1Errors.joined(separator: ", "))")
+            }
+
+            let side2Errors = validateDishNameMatchesIngredients(
+                dishName: aiRecipe.sideDish2.name,
+                ingredients: aiRecipe.sideDish2.ingredients,
+                dishType: "副菜2"
+            )
+            if !side2Errors.isEmpty {
+                validationErrors.append("Recipe \(index + 1) - 副菜2: \(side2Errors.joined(separator: ", "))")
+            }
+
+            // Check for duplicate cooking methods within same bento
+            let cookingMethod1 = extractCookingMethod(aiRecipe.sideDish1.name)
+            let cookingMethod2 = extractCookingMethod(aiRecipe.sideDish2.name)
+
+            if !cookingMethod1.isEmpty && !cookingMethod2.isEmpty && cookingMethod1 == cookingMethod2 {
+                let error = "⚠️ 同じ弁当内で調理法が重複: 副菜1「\(aiRecipe.sideDish1.name)」と副菜2「\(aiRecipe.sideDish2.name)」がどちらも「\(cookingMethod1)」"
+                validationErrors.append(error)
+                print(error)
+            }
+
+            // Collect all side dishes
+            allSideDishes.append(aiRecipe.sideDish1.name)
+            allSideDishes.append(aiRecipe.sideDish2.name)
+        }
+
+        // 🚨 CRITICAL VALIDATION: Check for duplicate side dishes across all recipes
+        print("\n🔍 Checking for duplicate side dishes across all \(aiRecipesResponse.recipes.count) recipes:")
+        print("All side dishes: \(allSideDishes)")
+
+        let sideDishCounts = Dictionary(grouping: allSideDishes, by: { $0 }).mapValues { $0.count }
+        for (dish, count) in sideDishCounts where count > 1 {
+            let error = "⚠️ 副菜が重複: 「\(dish)」が\(count)回出現"
+            validationErrors.append(error)
+            print(error)
+        }
+
+        // 🚨 CRITICAL VALIDATION: Check for similar cooking methods across all side dishes
+        let cookingMethods = allSideDishes.map { extractCookingMethod($0) }.filter { !$0.isEmpty }
+        let methodCounts = Dictionary(grouping: cookingMethods, by: { $0 }).mapValues { $0.count }
+        for (method, count) in methodCounts where count > 1 {
+            let warning = "⚠️ 調理法が重複: 「\(method)」が\(count)回出現"
+            validationErrors.append(warning)
+            print(warning)
+        }
+
+        // Print validation summary
+        if !validationErrors.isEmpty {
+            print("\n❌ VALIDATION ERRORS DETECTED (\(validationErrors.count) issues):")
+            for error in validationErrors {
+                print("  - \(error)")
+            }
+            print("\n⚠️ API response has validation issues but proceeding with recipes...")
+        } else {
+            print("\n✅ All validation checks passed!")
+        }
+
         let bentoRecipes = aiRecipesResponse.recipes.map { aiRecipe in
             let mainDish = DishItem(name: aiRecipe.mainDish.name, ingredients: aiRecipe.mainDish.ingredients, instructions: aiRecipe.mainDish.instructions)
             let sideDish1 = DishItem(name: aiRecipe.sideDish1.name, ingredients: aiRecipe.sideDish1.ingredients, instructions: aiRecipe.sideDish1.instructions)
@@ -1034,9 +1125,79 @@ class BentoAIService: ObservableObject {
                 tips: aiRecipe.tips
             )
         }
-        
+
         print("✅ Successfully converted to \(bentoRecipes.count) BentoRecipe objects")
         return bentoRecipes
+    }
+
+    // Helper function to validate dish name matches ingredients
+    private func validateDishNameMatchesIngredients(dishName: String, ingredients: [String], dishType: String) -> [String] {
+        var errors: [String] = []
+
+        // Extract ingredient keywords from dish name
+        let keywords = extractIngredientsFromName(dishName)
+
+        print("  \(dishType) '\(dishName)' - キーワード: \(keywords)")
+
+        for keyword in keywords {
+            let found = ingredients.contains { ingredient in
+                ingredient.contains(keyword) || keyword.contains(ingredient)
+            }
+
+            if !found {
+                errors.append("「\(dishName)」に「\(keyword)」が含まれているが、材料リストに見つかりません")
+                print("    ❌ Missing: \(keyword)")
+            } else {
+                print("    ✅ Found: \(keyword)")
+            }
+        }
+
+        return errors
+    }
+
+    // Extract ingredient keywords from dish name
+    private func extractIngredientsFromName(_ name: String) -> [String] {
+        var keywords: [String] = []
+
+        // Common ingredients and flavors to check
+        let ingredientPatterns = [
+            "レモン", "ライム", "ゆず", "柚子",
+            "タイム", "ローズマリー", "ロゼマリー", "バジル", "パセリ", "オレガノ", "セージ",
+            "にんにく", "ガーリック", "生姜", "しょうが",
+            "トマト", "きのこ", "しいたけ", "えのき",
+            "わさび", "からし", "マスタード",
+            "りんご", "バルサミコ", "ハーブ", "スパイス",
+            "チーズ", "バター", "マヨネーズ"
+        ]
+
+        for pattern in ingredientPatterns {
+            if name.contains(pattern) {
+                keywords.append(pattern)
+            }
+        }
+
+        return keywords
+    }
+
+    // Extract cooking method from dish name
+    private func extractCookingMethod(_ dishName: String) -> String {
+        let cookingMethods = [
+            "煮物", "煮付け", "含め煮", "甘露煮", "佃煮", "角煮", "煮込み",
+            "焼き", "塩焼き", "味噌焼き", "照り焼き", "蒲焼き", "西京焼き",
+            "揚げ", "唐揚げ", "竜田揚げ", "天ぷら", "フライ", "カツ",
+            "炒め", "炒め物", "きんぴら",
+            "和え", "和え物", "胡麻和え", "ごま和え", "お浸し", "おひたし",
+            "蒸し", "酒蒸し", "ホイル蒸し",
+            "漬け", "南蛮漬け", "マリネ"
+        ]
+
+        for method in cookingMethods {
+            if dishName.contains(method) {
+                return method
+            }
+        }
+
+        return ""
     }
     
     private func extractJSON(from text: String) -> String {
