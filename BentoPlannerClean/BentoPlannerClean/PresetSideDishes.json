@@ -1,0 +1,148 @@
+{
+  "sideDishes": [
+    {
+      "name": "にんじんのきんぴら",
+      "dish": {
+        "name": "にんじんのきんぴら",
+        "ingredients": ["にんじん", "ごま油", "醤油", "みりん", "白ごま"],
+        "instructions": ["にんじんを細切りにする", "ごま油で炒める", "調味料で味付けしてごまをふる"]
+      },
+      "prepTime": 10,
+      "calories": 80,
+      "cookingMethod": "きんぴら",
+      "season": null
+    },
+    {
+      "name": "ほうれん草の胡麻和え",
+      "dish": {
+        "name": "ほうれん草の胡麻和え",
+        "ingredients": ["ほうれん草", "白すりごま", "醤油", "砂糖"],
+        "instructions": ["ほうれん草を茹でる", "水気を絞って切る", "調味料と和える"]
+      },
+      "prepTime": 8,
+      "calories": 60,
+      "cookingMethod": "和え物",
+      "season": null
+    },
+    {
+      "name": "かぼちゃの煮物",
+      "dish": {
+        "name": "かぼちゃの煮物",
+        "ingredients": ["かぼちゃ", "だしの素", "醤油", "みりん", "砂糖"],
+        "instructions": ["かぼちゃを一口大に切る", "鍋に調味料とかぼちゃを入れる", "弱火で煮る"]
+      },
+      "prepTime": 15,
+      "calories": 90,
+      "cookingMethod": "煮物",
+      "season": "秋"
+    },
+    {
+      "name": "ブロッコリーの塩茹で",
+      "dish": {
+        "name": "ブロッコリーの塩茹で",
+        "ingredients": ["ブロッコリー", "塩", "マヨネーズ（別添）"],
+        "instructions": ["ブロッコリーを小房に分ける", "塩を入れたお湯で茹でる", "水気を切る"]
+      },
+      "prepTime": 8,
+      "calories": 40,
+      "cookingMethod": "茹で物",
+      "season": null
+    },
+    {
+      "name": "ピーマンとじゃこの炒め物",
+      "dish": {
+        "name": "ピーマンとじゃこの炒め物",
+        "ingredients": ["ピーマン", "ちりめんじゃこ", "ごま油", "醤油"],
+        "instructions": ["ピーマンを細切りにする", "ごま油で炒める", "じゃこを加えて醤油で味付け"]
+      },
+      "prepTime": 8,
+      "calories": 70,
+      "cookingMethod": "炒め物",
+      "season": null
+    },
+    {
+      "name": "れんこんのきんぴら",
+      "dish": {
+        "name": "れんこんのきんぴら",
+        "ingredients": ["れんこん", "ごま油", "醤油", "みりん", "七味唐辛子"],
+        "instructions": ["れんこんを薄切りにする", "ごま油で炒める", "調味料で味付け"]
+      },
+      "prepTime": 10,
+      "calories": 75,
+      "cookingMethod": "きんぴら",
+      "season": "秋"
+    },
+    {
+      "name": "いんげんの胡麻和え",
+      "dish": {
+        "name": "いんげんの胡麻和え",
+        "ingredients": ["いんげん", "白すりごま", "醤油", "砂糖"],
+        "instructions": ["いんげんを茹でる", "食べやすい長さに切る", "調味料と和える"]
+      },
+      "prepTime": 8,
+      "calories": 55,
+      "cookingMethod": "和え物",
+      "season": null
+    },
+    {
+      "name": "ナスの揚げ浸し",
+      "dish": {
+        "name": "ナスの揚げ浸し",
+        "ingredients": ["ナス", "めんつゆ", "生姜", "揚げ油"],
+        "instructions": ["ナスを乱切りにする", "油で揚げる", "めんつゆに浸す"]
+      },
+      "prepTime": 15,
+      "calories": 120,
+      "cookingMethod": "揚げ物",
+      "season": "夏"
+    },
+    {
+      "name": "きゅうりとわかめの酢の物",
+      "dish": {
+        "name": "きゅうりとわかめの酢の物",
+        "ingredients": ["きゅうり", "乾燥わかめ", "酢", "砂糖", "塩"],
+        "instructions": ["きゅうりを薄切りにする", "わかめを戻す", "調味料で和える"]
+      },
+      "prepTime": 10,
+      "calories": 30,
+      "cookingMethod": "酢の物",
+      "season": null
+    },
+    {
+      "name": "ちくわのチーズ焼き",
+      "dish": {
+        "name": "ちくわのチーズ焼き",
+        "ingredients": ["ちくわ", "チーズ", "青のり"],
+        "instructions": ["ちくわにチーズを詰める", "トースターで焼く", "青のりをふる"]
+      },
+      "prepTime": 5,
+      "calories": 85,
+      "cookingMethod": "焼き物",
+      "season": null
+    },
+    {
+      "name": "小松菜のおひたし",
+      "dish": {
+        "name": "小松菜のおひたし",
+        "ingredients": ["小松菜", "だしの素", "醤油", "かつお節"],
+        "instructions": ["小松菜を茹でる", "水気を絞って切る", "だし醤油をかけてかつお節をのせる"]
+      },
+      "prepTime": 8,
+      "calories": 45,
+      "cookingMethod": "おひたし",
+      "season": null
+    },
+    {
+      "name": "しめじのバター炒め",
+      "dish": {
+        "name": "しめじのバター炒め",
+        "ingredients": ["しめじ", "バター", "醤油", "塩こしょう"],
+        "instructions": ["しめじをほぐす", "バターで炒める", "醤油と塩こしょうで味付け"]
+      },
+      "prepTime": 8,
+      "calories": 65,
+      "cookingMethod": "炒め物",
+      "season": null
+    }
+  ]
+}

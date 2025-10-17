@@ -413,19 +413,21 @@ class BentoAIService: ObservableObject {
         let categoryHint: String
         switch category {
         case .omakase:
-            categoryHint = "バランス。弁当名:シンプルに「鶏の照り焼き弁当」等"
+            categoryHint = "バランス。弁当名:「鶏の照り焼き弁当」等"
         case .hearty:
             categoryHint = "がっつり700kcal。肉メイン(魚は使わない)。弁当名:「豚の生姜焼き弁当」等"
         case .simple:
-            categoryHint = "10分以内。弁当名:シンプルに"
+            categoryHint = "10分以内。弁当名:「鮭の塩焼き弁当」等"
         case .fishMain:
             categoryHint = "魚メイン。弁当名:「鯖の味噌煮弁当」等"
         }
 
         return """
-        \(categoryHint) ID:\(uniqueId)
+        \(categoryHint) 乱数:\(uniqueId)
 
         必ず3レシピ生成。料理名の食材は材料に必須記載。副菜:「〜の煮浸し」「〜の煮物」「〜のきんぴら」等(煮浸しとお浸しは同一献立に入れない)。全6副菜は異なる調理法必須。
+        【お弁当NG食材・絶対禁止】大根おろし,生野菜サラダ,豆腐,刺身,マヨネーズサラダ,汁気の多い料理
+        【献立名NG・禁止】季節プレフィックス(春の/夏の/秋の/冬の/春風香る/初夏の/真夏の/初秋の/晩秋の/初冬の/真冬の等)は絶対につけない
         \(avoidRecipeNames.isEmpty ? "" : "避:\(avoidRecipeNames.prefix(3).joined(separator: ","))")
         """
     }

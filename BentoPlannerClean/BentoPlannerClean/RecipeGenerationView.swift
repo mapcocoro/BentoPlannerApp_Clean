@@ -156,9 +156,16 @@ struct RecipeGenerationView: View {
     
     var generateButton: some View {
         Button(action: {
-            NSLog("🔘 Generate button tapped for category: \(category.rawValue)")
-            NSLog("🔘 Current isLoading state: \(bentoStore.isLoading)")
-            Task {
+            // アクション内で直接チェック
+            guard !bentoStore.isLoading else {
+                NSLog("⚠️ [Button Action] Button disabled, isLoading is true")
+                return
+            }
+
+            NSLog("🔘 [Button Action] Generate button tapped for category: \(category.rawValue)")
+
+            // Taskを作成（メインアクターで実行）
+            Task { @MainActor in
                 await bentoStore.generateAIRecipes(for: category)
             }
         }) {
@@ -170,7 +177,7 @@ struct RecipeGenerationView: View {
                 } else {
                     Image(systemName: "sparkles")
                 }
-                
+
                 Text(bentoStore.isLoading ? "生成中..." : "新しいレシピを生成")
                     .font(.system(size: 16, weight: .medium, design: .rounded))
             }

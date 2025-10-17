@@ -2,34 +2,52 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject var bentoStore: BentoStore
-    
+
     var body: some View {
-        TabView {
-            NavigationView {
-                HomeView()
+        ZStack(alignment: .bottom) {
+            TabView {
+                NavigationView {
+                    HomeView()
+                }
+                .tabItem {
+                    Image(systemName: "house.fill")
+                    Text("ホーム")
+                }
+
+                NavigationView {
+                    WeeklyPlanView()
+                }
+                .tabItem {
+                    Image(systemName: "calendar")
+                    Text("週間プラン")
+                }
+
+                NavigationView {
+                    FavoritesView()
+                }
+                .tabItem {
+                    Image(systemName: "heart.fill")
+                    Text("お気に入り")
+                }
             }
-            .tabItem {
-                Image(systemName: "house.fill")
-                Text("ホーム")
+            .accentColor(.orange)
+
+            // AdMob Banner Ad (テスト用ID)
+            VStack(spacing: 0) {
+                Spacer()
+                AdMobBannerView(adUnitID: "ca-app-pub-3940256099942544/2934735716")
+                    .frame(width: UIScreen.main.bounds.width, height: 50)
+                    .background(Color.gray.opacity(0.3))
+                    .overlay(
+                        Rectangle()
+                            .stroke(Color.red, lineWidth: 2)
+                    )
             }
-            
-            NavigationView {
-                WeeklyPlanView()
-            }
-            .tabItem {
-                Image(systemName: "calendar")
-                Text("週間プラン")
-            }
-            
-            NavigationView {
-                FavoritesView()
-            }
-            .tabItem {
-                Image(systemName: "heart.fill")
-                Text("お気に入り")
-            }
+            .ignoresSafeArea(edges: .bottom)
         }
-        .accentColor(.orange)
+        .onAppear {
+            print("📱 ContentView appeared - バナー広告の初期化")
+        }
     }
 }
 

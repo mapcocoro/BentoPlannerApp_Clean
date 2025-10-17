@@ -9,42 +9,52 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject var bentoStore: BentoStore
-    
+
     var body: some View {
-        TabView {
-            NavigationView {
-                HomeView()
+        VStack(spacing: 0) {
+            TabView {
+                NavigationView {
+                    HomeView()
+                }
+                .tabItem {
+                    Image(systemName: "house.fill")
+                    Text("ホーム")
+                }
+
+                NavigationView {
+                    IngredientSelectionView()
+                }
+                .tabItem {
+                    Image(systemName: "refrigerator")
+                    Text("食材から検索")
+                }
+
+                NavigationView {
+                    WeeklyPlanView()
+                }
+                .tabItem {
+                    Image(systemName: "calendar")
+                    Text("週間プラン")
+                }
+
+                NavigationView {
+                    FavoritesView()
+                }
+                .tabItem {
+                    Image(systemName: "heart.fill")
+                    Text("お気に入り")
+                }
             }
-            .tabItem {
-                Image(systemName: "house.fill")
-                Text("ホーム")
-            }
-            
-            NavigationView {
-                IngredientSelectionView()
-            }
-            .tabItem {
-                Image(systemName: "refrigerator")
-                Text("食材から検索")
-            }
-            
-            NavigationView {
-                WeeklyPlanView()
-            }
-            .tabItem {
-                Image(systemName: "calendar")
-                Text("週間プラン")
-            }
-            
-            NavigationView {
-                FavoritesView()
-            }
-            .tabItem {
-                Image(systemName: "heart.fill")
-                Text("お気に入り")
-            }
+            .accentColor(.orange)
+
+            // AdMob Banner Ad
+            AdMobBannerView(adUnitID: "ca-app-pub-2693486326447923/9650813286")
+                .frame(height: 50)
+                .background(Color(.systemBackground))
         }
-        .accentColor(.orange)
+        .onAppear {
+            print("📱 ContentView appeared - バナー広告の初期化")
+        }
     }
 }
 

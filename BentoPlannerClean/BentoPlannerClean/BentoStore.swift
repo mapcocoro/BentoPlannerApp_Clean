@@ -29,6 +29,9 @@ class BentoStore: ObservableObject {
     // レシピ生成履歴を記録（重複回避用）
     private var recipeHistoryManager = RecipeHistoryManager()
     private var lastGeneratedRecipeNames: [BentoCategory: [String]] = [:]
+
+    // バックグラウンドで生成したAPIレシピキャッシュ（即座に表示用）
+    private var cachedApiRecipes: [BentoCategory: [BentoRecipe]] = [:]
     
     private let dailyRecommendationsKey = "DailyRecommendations"
     private let lastUpdateDateKey = "LastUpdateDate"
@@ -44,18 +47,21 @@ class BentoStore: ObservableObject {
         }
         loadWeeklyPlan()
         updateFavorites()
-        loadDailyRecommendations() // まず既存のデータをロード
-        generateDailyRecommendations() // 日付チェックして必要に応じて更新
+        // アプリを開くたびに必ず新しいメニューを生成
+        forceUpdateDailyRecommendations()
     }
 
     // MARK: - Recipe Generation
     func generateAIRecipes(for category: BentoCategory) async {
+        NSLog("🔄 [ENTRY] generateAIRecipes called for category: \(category.rawValue)")
+        NSLog("🔄 [ENTRY] Current isLoading: \(isLoading)")
+
         let now = Date()
         let timestamp = Int(now.timeIntervalSince1970)
-        let safeTimestamp = timestamp % 1000000  // 値を制限
-        let randomId = Int.random(in: 1000...9999)  // 範囲を縮小
-        let safeCategoryHash = abs(category.rawValue.hashValue) % 10000  // 値を制限
-        
+        let safeTimestamp = timestamp % 1000000
+        let randomId = Int.random(in: 1000...9999)
+        let safeCategoryHash = abs(category.rawValue.hashValue) % 10000
+
         let complexRandomId = safeTimestamp + randomId + safeCategoryHash
 
         NSLog("🔄 Starting recipe generation for category: \(category.rawValue) - ID: \(complexRandomId)")
@@ -69,14 +75,124 @@ class BentoStore: ObservableObject {
         isLoading = true
         errorMessage = nil
 
+        // 既存のレシピを即座にクリア（必ず新しいメニューを表示するため）
+        self.aiGeneratedRecipes[category] = []
+
+        let historyRecipes = recipeHistoryManager.getRecentRecipes(for: category, limit: 5)  // 最近5個のみ除外
+
+        // 1. まずキャッシュされたAPIレシピをチェック（最優先）
+        if let cachedRecipes = cachedApiRecipes[category], cachedRecipes.count >= 3 {
+            let recipesToShow = Array(cachedRecipes.prefix(3))
+            NSLog("⚡️ Using \(recipesToShow.count) cached API recipes (generated in background)")
+            NSLog("⚡️ Recipe names: \(recipesToShow.map { $0.name }.joined(separator: ", "))")
+
+            // UX向上：3-5秒の演出的な遅延を追加
+            Task { @MainActor in
+                NSLog("⏱️ [Cache Display Task] Started on main actor")
+                let delay = Double.random(in: 3.0...5.0)
+                NSLog("⏱️ Adding \(String(format: "%.1f", delay))s delay for better UX...")
+
+                do {
+                    try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                    NSLog("⏱️ [Cache Display Task] Delay completed")
+                } catch {
+                    NSLog("❌ [Cache Display Task] Sleep error: \(error)")
+                }
+
+                NSLog("📝 [Cache Display Task] Setting aiGeneratedRecipes[\(category.rawValue)] to \(recipesToShow.count) recipes")
+                self.aiGeneratedRecipes[category] = recipesToShow
+                NSLog("📝 [Cache Display Task] aiGeneratedRecipes[\(category.rawValue)] now has \(self.aiGeneratedRecipes[category]?.count ?? 0) recipes")
+
+                NSLog("📝 [Cache Display Task] Adding to history...")
+                for recipe in recipesToShow {
+                    recipeHistoryManager.addToHistory(recipe, category: category)
+                }
+
+                NSLog("📝 [Cache Display Task] Updating lastGeneratedRecipeNames...")
+                self.lastGeneratedRecipeNames[category] = recipesToShow.map { $0.name }
+
+                NSLog("📝 [Cache Display Task] About to set isLoading to false...")
+                // 既に@MainActorなので直接実行
+                self.isLoading = false
+                NSLog("✅ \(recipesToShow.count) cached recipes loaded - isLoading is now: \(self.isLoading)")
+
+                // objectWillChangeを明示的に送信
+                self.objectWillChange.send()
+                NSLog("📝 [Cache Display Task] Sent objectWillChange - completed successfully")
+
+                // キャッシュから削除
+                NSLog("📝 [Cache Display Task] Removing used recipes from cache...")
+                self.cachedApiRecipes[category] = Array(cachedRecipes.dropFirst(3))
+                NSLog("✅ \(recipesToShow.count) cached API recipes displayed after delay, \(self.cachedApiRecipes[category]?.count ?? 0) recipes remaining in cache")
+
+                // バックグラウンドで次のレシピを生成してキャッシュ補充
+                NSLog("📝 [Cache Display Task] Starting background API generation...")
+                Task {
+                    await self.generateAndAddToPresetPool(for: category)
+                }
+                NSLog("📝 [Cache Display Task] Task completed successfully")
+            }
+            return
+        }
+
+        // 2. 次にプリセット献立を即座に表示（ユーザーを待たせない）
+        var presetRecipes: [BentoRecipe] = []
+        var excludedRecipes = historyRecipes
+
+        // 3つのユニークなレシピを取得
+        for _ in 0..<3 {
+            if let recipe = PresetRecipeManager.shared.getRandomRecipe(for: category, excluding: excludedRecipes) {
+                presetRecipes.append(recipe)
+                excludedRecipes.append(recipe)
+            }
+        }
+
+        if !presetRecipes.isEmpty {
+            NSLog("📦 Using \(presetRecipes.count) preset recipes")
+            NSLog("🚫 Excluded \(historyRecipes.count) previous recipes to ensure uniqueness")
+
+            // UX向上：3-5秒の演出的な遅延を追加
+            Task { @MainActor in
+                let delay = Double.random(in: 3.0...5.0)
+                NSLog("⏱️ Adding \(String(format: "%.1f", delay))s delay for better UX...")
+                try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+
+                self.aiGeneratedRecipes[category] = presetRecipes
+
+                // 履歴に追加
+                for recipe in presetRecipes {
+                    recipeHistoryManager.addToHistory(recipe, category: category)
+                }
+
+                self.lastGeneratedRecipeNames[category] = presetRecipes.map { $0.name }
+
+                NSLog("📝 [Preset Display Task] About to set isLoading to false...")
+                // 既に@MainActorなので直接実行
+                self.isLoading = false
+                NSLog("✅ \(presetRecipes.count) preset recipes loaded - isLoading is now: \(self.isLoading)")
+
+                // objectWillChangeを明示的に送信
+                self.objectWillChange.send()
+                NSLog("📝 [Preset Display Task] Sent objectWillChange - completed successfully")
+
+                // バックグラウンドでAPIを呼んで新しいレシピも生成（キャッシュに追加）
+                Task {
+                    await generateAndAddToPresetPool(for: category)
+                }
+            }
+            return
+        }
+
+        // プリセットがない場合のみAPI生成を待つ
+        NSLog("⚠️ No unique preset recipes available, generating via API...")
+
         do {
             NSLog("📡 Making API request...")
-            // 過去30回分のレシピ履歴を取得（重複回避用）
-            let historyRecipes = recipeHistoryManager.getRecentRecipes(for: category, limit: 30)
+            // すべての履歴を取得して絶対に重複しないようにする
             let previousRecipeNames = historyRecipes.map { $0.name }
-            let previousMainDishes = recipeHistoryManager.getRecentMainDishes(for: category, limit: 50)
-            let previousSideDishes = recipeHistoryManager.getRecentSideDishes(for: category, limit: 50)
-            let previousCookingMethods = recipeHistoryManager.getRecentCookingMethods(for: category, limit: 20)
+            let previousMainDishes = recipeHistoryManager.getRecentMainDishes(for: category, limit: 100)
+            let previousSideDishes = recipeHistoryManager.getRecentSideDishes(for: category, limit: 100)
+            let previousCookingMethods = recipeHistoryManager.getRecentCookingMethods(for: category, limit: 50)
 
             NSLog("🚫 Avoiding \(previousRecipeNames.count) previous recipes")
             NSLog("🍳 Avoiding \(previousMainDishes.count) main dishes")
@@ -91,36 +207,72 @@ class BentoStore: ObservableObject {
                 previousSideDishes: previousSideDishes,
                 previousCookingMethods: previousCookingMethods
             )
-            NSLog("✅ Successfully generated \(newRecipes.count) recipes")
+            NSLog("✅ Successfully generated \(newRecipes.count) unique recipes")
 
-            // 既存のレシピをクリアして新しいものを強制的に表示
-            self.aiGeneratedRecipes[category] = []
             self.aiGeneratedRecipes[category] = newRecipes
-            
-            // 今回生成されたレシピを履歴に追加
+
             for recipe in newRecipes {
                 recipeHistoryManager.addToHistory(recipe, category: category)
             }
             self.lastGeneratedRecipeNames[category] = newRecipes.map { $0.name }
-            NSLog("📝 Added \(newRecipes.count) recipes to history for \(category.rawValue)")
 
             self.isLoading = false
             NSLog("✅ UI updated with new recipes for category: \(category.rawValue)")
         } catch {
             NSLog("❌ Recipe generation failed: \(error.localizedDescription)")
-            NSLog("❌ Error type: \(type(of: error))")
-            NSLog("❌ Full error: \(error)")
 
             self.errorMessage = "AIサーバーエラーが発生しました。フォールバックレシピを表示しています。"
             self.isLoading = false
-            // フォールバック: カテゴリ専用のサンプルレシピを生成
-            self.aiGeneratedRecipes[category] = []
             let fallbackRecipes = self.generateCategorySpecificFallback(for: category)
             self.aiGeneratedRecipes[category] = fallbackRecipes
             NSLog("🔄 Using fallback recipes for \(category.rawValue): \(fallbackRecipes.count) recipes")
         }
     }
-    
+
+    // MARK: - Background API Generation (キャッシュに追加用)
+    private func generateAndAddToPresetPool(for category: BentoCategory) async {
+        NSLog("🔄 [Background] Starting API generation to add to cache for \(category.rawValue)")
+
+        do {
+            // 履歴を取得して重複を避ける
+            let historyRecipes = recipeHistoryManager.getRecentRecipes(for: category, limit: 5)  // 最近5個のみ除外
+            let previousRecipeNames = historyRecipes.map { $0.name }
+            let previousMainDishes = recipeHistoryManager.getRecentMainDishes(for: category, limit: 100)
+            let previousSideDishes = recipeHistoryManager.getRecentSideDishes(for: category, limit: 100)
+            let previousCookingMethods = recipeHistoryManager.getRecentCookingMethods(for: category, limit: 50)
+
+            NSLog("🔄 [Background] Generating new recipe avoiding \(previousRecipeNames.count) previous recipes")
+
+            let newRecipes = try await aiService.generateBentoRecipes(
+                for: category,
+                randomSeed: Int.random(in: 0...999999),
+                avoidRecipeNames: previousRecipeNames,
+                previousMainDishes: previousMainDishes,
+                previousSideDishes: previousSideDishes,
+                previousCookingMethods: previousCookingMethods
+            )
+
+            NSLog("✅ [Background] Successfully generated \(newRecipes.count) new recipes")
+
+            // キャッシュに追加（次回「新しいレシピを生成」を押したときに即座に表示）
+            if cachedApiRecipes[category] == nil {
+                cachedApiRecipes[category] = []
+            }
+            cachedApiRecipes[category]?.append(contentsOf: newRecipes)
+
+            // キャッシュサイズ制限（最大5レシピまで保持）
+            if let cacheCount = cachedApiRecipes[category]?.count, cacheCount > 5 {
+                cachedApiRecipes[category] = Array(cachedApiRecipes[category]!.prefix(5))
+            }
+
+            NSLog("✅ [Background] Added to cache. Cache now has \(cachedApiRecipes[category]?.count ?? 0) recipes for \(category.rawValue)")
+
+        } catch {
+            NSLog("⚠️ [Background] API generation failed (non-critical): \(error.localizedDescription)")
+            // バックグラウンド処理なので、エラーでもユーザーには影響なし
+        }
+    }
+
     // MARK: - Ingredient-Based Recipe Generation
     func generateRecipesFromIngredients(_ selectedIngredients: [Ingredient], additionalNotes: String = "") async {
         NSLog("🔄 Starting ingredient-based recipe generation")

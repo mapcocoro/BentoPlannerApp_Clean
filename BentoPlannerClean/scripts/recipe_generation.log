@@ -1,0 +1,53 @@
+
+🔄 Generating 10 recipes for おまかせ...
+  📝 Batch 1/2: Generating 5 recipes...
+    🌐 API呼び出し中... (attempt 1/3)
+    ✓ API応答受信
+  ✅ Total: 5/10 recipes generated
+  📝 Batch 2/2: Generating 5 recipes...
+    🌐 API呼び出し中... (attempt 1/3)
+    ✓ API応答受信
+  ✅ Total: 10/10 recipes generated
+✅ Completed おまかせ: 10 recipes
+
+🔄 Generating 10 recipes for がっつり...
+  📝 Batch 1/2: Generating 5 recipes...
+    🌐 API呼び出し中... (attempt 1/3)
+    ✓ API応答受信
+  ✅ Total: 5/10 recipes generated
+  📝 Batch 2/2: Generating 5 recipes...
+    🌐 API呼び出し中... (attempt 1/3)
+    ✓ API応答受信
+  ✅ Total: 10/10 recipes generated
+✅ Completed がっつり: 10 recipes
+
+🔄 Generating 10 recipes for お魚弁当...
+  📝 Batch 1/2: Generating 5 recipes...
+    🌐 API呼び出し中... (attempt 1/3)
+    ✓ API応答受信
+  ✅ Total: 5/10 recipes generated
+  📝 Batch 2/2: Generating 5 recipes...
+    🌐 API呼び出し中... (attempt 1/3)
+    ✓ API応答受信
+  ✅ Total: 10/10 recipes generated
+✅ Completed お魚弁当: 10 recipes
+
+🔄 Generating 10 recipes for 簡単弁当...
+  📝 Batch 1/2: Generating 5 recipes...
+    🌐 API呼び出し中... (attempt 1/3)
+    ✓ API応答受信
+  ✅ Total: 5/10 recipes generated
+  📝 Batch 2/2: Generating 5 recipes...
+    🌐 API呼び出し中... (attempt 1/3)
+    ✓ API応答受信
+  ✅ Total: 10/10 recipes generated
+✅ Completed 簡単弁当: 10 recipes
+
+✅ Successfully generated preset recipes!
+📁 Saved to: ../BentoPlannerClean/PresetRecipes.json
+
+📊 Summary:
+  - おまかせ: 10 recipes
+  - がっつり: 10 recipes
+  - お魚弁当: 10 recipes
+  - 簡単弁当: 10 recipes

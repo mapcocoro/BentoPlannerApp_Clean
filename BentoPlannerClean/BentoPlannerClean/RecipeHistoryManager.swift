@@ -3,7 +3,7 @@ import Foundation
 class RecipeHistoryManager {
     private let userDefaults = UserDefaults.standard
     private let historyKeyPrefix = "RecipeHistory_"
-    private let maxHistoryPerCategory = 100
+    private let maxHistoryPerCategory = 30  // 履歴を30個に制限（プリセットJSONは50個なので30個で十分）
 
     struct HistoryItem: Codable {
         let recipe: BentoRecipe
@@ -42,7 +42,9 @@ class RecipeHistoryManager {
 
     func getRecentRecipes(for category: BentoCategory, limit: Int = 30) -> [BentoRecipe] {
         let history = getHistory(for: category)
-        return Array(history.prefix(limit)).map { $0.recipe }
+        let result = Array(history.prefix(limit)).map { $0.recipe }
+        NSLog("📊 [RecipeHistory] Returning \(result.count) recipes for category \(category.rawValue) (requested limit: \(limit), total history: \(history.count))")
+        return result
     }
 
     func getRecentMainDishes(for category: BentoCategory, limit: Int = 50) -> [String] {

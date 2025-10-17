@@ -44,6 +44,10 @@ struct DishItem: Identifiable, Codable {
     let name: String
     let ingredients: [String]
     let instructions: [String]
+
+    enum CodingKeys: String, CodingKey {
+        case name, ingredients, instructions
+    }
 }
 
 // MARK: - Bento Recipe
@@ -129,6 +133,33 @@ struct Ingredient: Identifiable, Hashable {
     let emoji: String
 }
 
+// MARK: - Preset Main Dish (for combination system)
+struct PresetMainDish: Identifiable, Codable {
+    let id = UUID()
+    let name: String
+    let description: String
+    let dish: DishItem
+    let prepTime: Int // minutes
+    let calories: Int // approximate calories for main dish only
+    let difficulty: BentoRecipe.Difficulty
+    let season: String? // "春", "夏", "秋", "冬", or nil for all seasons
+
+    enum CodingKeys: String, CodingKey {
+        case name, description, dish, prepTime, calories, difficulty, season
+    }
+}
+
+// MARK: - Preset Side Dish (for combination system)
+struct PresetSideDish: Identifiable, Codable {
+    let id = UUID()
+    let name: String
+    let dish: DishItem
+    let prepTime: Int // minutes
+    let calories: Int // approximate calories
+    let cookingMethod: String // "きんぴら", "煮物", "和え物", etc.
+    let season: String? // "春", "夏", "秋", "冬", or nil for all seasons
+}
+
 // MARK: - Predefined Ingredients
 extension Ingredient {
     static let allIngredients: [Ingredient] = [
@@ -139,7 +170,7 @@ extension Ingredient {
         Ingredient(name: "鮭", category: .mainProtein, emoji: "🐟"),
         Ingredient(name: "卵", category: .mainProtein, emoji: "🥚"),
         Ingredient(name: "鯖", category: .mainProtein, emoji: "🐟"),
-        
+
         // 野菜
         Ingredient(name: "キャベツ", category: .vegetables, emoji: "🥬"),
         Ingredient(name: "玉ねぎ", category: .vegetables, emoji: "🧅"),
@@ -150,7 +181,7 @@ extension Ingredient {
         Ingredient(name: "きのこ類", category: .vegetables, emoji: "🍄"),
         Ingredient(name: "なす", category: .vegetables, emoji: "🍆"),
         Ingredient(name: "かぼちゃ", category: .vegetables, emoji: "🎃"),
-        
+
         // その他の材料・調味料
         Ingredient(name: "ごま油", category: .seasonings, emoji: "🫒"),
         Ingredient(name: "醤油", category: .seasonings, emoji: "🥢"),
@@ -162,7 +193,7 @@ extension Ingredient {
         Ingredient(name: "冷凍食品", category: .seasonings, emoji: "🧊"),
         Ingredient(name: "缶詰", category: .seasonings, emoji: "🥫")
     ]
-    
+
     static func ingredientsByCategory(_ category: IngredientCategory) -> [Ingredient] {
         return allIngredients.filter { $0.category == category }
     }
